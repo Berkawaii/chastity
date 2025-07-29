@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
-import '../../data/repositories/europeana_repository.dart';
+
 import '../../data/models/artwork.dart';
+import '../../data/repositories/europeana_repository.dart';
 
 class ArtworkProvider extends ChangeNotifier {
   final ArtworkRepository _repository;
@@ -97,11 +100,15 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      log('ArtworkProvider: Getting details for artwork ID: $recordId');
       final detail = await _repository.getArtworkDetail(recordId);
+      log('ArtworkProvider: Received detail response: ${detail != null ? 'success' : 'null'}');
+      log('ArtworkProvider: Response has object: ${detail.containsKey('object')}');
       _isLoading = false;
       notifyListeners();
       return detail;
     } catch (e) {
+      log('ArtworkProvider: Error getting artwork details: $e');
       _error = 'Failed to get artwork details: $e';
       _isLoading = false;
       notifyListeners();
@@ -119,9 +126,60 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // First try with the who: prefix
       final response = await _repository.getArtworksByArtist(artistName);
       _artworks = response.items ?? [];
+
+      // If no results found, try alternative search approaches
+      if (_artworks.isEmpty) {
+        // Log the attempt for debugging
+        log('No results found with who:$artistName, trying alternative search');
+
+        // Try without the who: prefix - direct name search
+        final alternativeResponse = await _repository.searchArtworks(
+          query: artistName,
+          pageSize: 30,
+        );
+
+        _artworks = alternativeResponse.items ?? [];
+
+        // If still empty, try with broader terms
+        if (_artworks.isEmpty) {
+          log('Still no results, trying with broader search terms');
+
+          // Try to extract the last name or first name for broader search
+          String searchTerm = artistName;
+          if (artistName.contains(' ')) {
+            // For artists with spaces in name like "Vincent van Gogh"
+            // Try using just the last name or most distinctive part
+            final nameParts = artistName.split(' ');
+            if (nameParts.length > 1) {
+              if (nameParts.contains('van') ||
+                  nameParts.contains('de') ||
+                  nameParts.contains('da')) {
+                // For names like "van Gogh" or "da Vinci", keep the prefix
+                searchTerm = nameParts.sublist(nameParts.length - 2).join(' ');
+              } else {
+                // Otherwise just use last name
+                searchTerm = nameParts.last;
+              }
+            }
+          }
+
+          final broadResponse = await _repository.searchArtworks(
+            query: 'creator:$searchTerm OR dc_creator:$searchTerm',
+            pageSize: 30,
+          );
+
+          _artworks = broadResponse.items ?? [];
+        }
+      }
+
       _hasMoreData = false; // Usually we get all results in one call for an artist
+
+      if (_artworks.isEmpty) {
+        _error = 'No artworks found for artist: $artistName';
+      }
     } catch (e) {
       _error = 'Failed to get artworks by artist: $e';
     } finally {

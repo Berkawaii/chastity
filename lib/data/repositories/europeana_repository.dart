@@ -46,7 +46,18 @@ class ArtworkRepository {
 
   // Get artworks by a specific artist
   Future<ArtworkSearchResponse> getArtworksByArtist(String artistName) async {
-    return await _apiService.searchArtworks(query: 'who:$artistName', pageSize: 30);
+    // Clean the artist name for better search results
+    String cleanArtistName = artistName.trim();
+
+    // Form a more comprehensive query to catch various artist name formats
+    String artistQuery = 'who:"$cleanArtistName"';
+
+    return await _apiService.searchArtworks(
+      query: artistQuery,
+      pageSize: 30,
+      // Remove filters that might restrict results
+      reusability: null,
+    );
   }
 }
 

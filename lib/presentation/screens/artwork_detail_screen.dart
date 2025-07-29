@@ -1,3 +1,5 @@
+import 'dart:developer' show log;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -76,6 +78,15 @@ class _ArtworkDetailScreenState extends State<ArtworkDetailScreen> {
   void _addToCollection() {
     if (_artwork == null) return;
 
+    // First save the artwork to favorites to ensure we have a local copy
+    final artworkId = _artwork!['id'];
+
+    log('Adding artwork $artworkId to collection');
+    log('Artwork data: $_artwork');
+
+    // Save artwork to favorites first to make sure we have a local copy
+    Provider.of<FavoriteProvider>(context, listen: false).addToFavorites(artworkId, _artwork!);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -83,7 +94,7 @@ class _ArtworkDetailScreenState extends State<ArtworkDetailScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return _CollectionSelectionBottomSheet(artworkId: _artwork!['id']);
+        return _CollectionSelectionBottomSheet(artworkId: artworkId);
       },
     );
   }
@@ -185,7 +196,7 @@ class _ArtworkDetailScreenState extends State<ArtworkDetailScreen> {
       for (String artist in knownArtists) {
         if (description.contains(artist)) {
           creator = artist;
-          print('Found artist $artist in description');
+          log('Found artist $artist in description');
           break;
         }
       }

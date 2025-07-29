@@ -247,7 +247,7 @@ class EuropeanaApiService {
         path = recordId;
       } else {
         // For sample records, we'll just use a placeholder format
-        log('Warning: Record ID does not follow the datasetId/localId format');
+        print('Warning: Record ID does not follow the datasetId/localId format: $recordId');
         path = recordId;
       }
 
@@ -255,14 +255,19 @@ class EuropeanaApiService {
         '${AppConstants.apiBaseUrl}${AppConstants.recordEndpoint}/$path.json',
       ).replace(queryParameters: {'wskey': AppConstants.apiKey});
 
-      log('Fetching artwork details from: ${uri.toString()}'); // Log the URL for debugging
+      print(
+        'EuropeanaApiService: Fetching artwork details from: ${uri.toString()}',
+      ); // Log the URL for debugging
 
       final response = await _client.get(uri);
-      log('Detail response status code: ${response.statusCode}'); // Log the status code
+      print(
+        'EuropeanaApiService: Detail response status code: ${response.statusCode}',
+      ); // Log the status code
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        log('Detail fetched successfully');
+        print('EuropeanaApiService: Detail fetched successfully');
+        print('EuropeanaApiService: Response keys: ${responseData.keys.toList()}');
 
         // Enhance the data with additional processing
         Map<String, dynamic> processedData = responseData;
@@ -270,6 +275,9 @@ class EuropeanaApiService {
         // Try to extract creator information from multiple possible fields
         if (processedData['object'] != null) {
           var object = processedData['object'];
+          print('EuropeanaApiService: Object found in response, keys: ${object.keys.toList()}');
+          print('EuropeanaApiService: Title: ${object['title']}');
+          print('EuropeanaApiService: Creator: ${object['creator']}');
 
           // Find a proper creator if none exists
           if (object['creator'] == null ||
@@ -300,14 +308,27 @@ class EuropeanaApiService {
                 'Van Gogh',
                 'Vincent van Gogh',
                 'Rembrandt',
+                'Rembrandt van Rijn',
                 'da Vinci',
                 'Leonardo da Vinci',
                 'Picasso',
+                'Pablo Picasso',
                 'Monet',
                 'Claude Monet',
                 'Vermeer',
+                'Johannes Vermeer',
                 'Dali',
                 'Salvador Dali',
+                'Salvador Dalí',
+                'Michelangelo',
+                'Raphael',
+                'Caravaggio',
+                'Klimt',
+                'Gustav Klimt',
+                'Kahlo',
+                'Frida Kahlo',
+                'Warhol',
+                'Andy Warhol',
               ];
 
               String description = '';

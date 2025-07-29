@@ -1,8 +1,11 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/models/artwork.dart';
 import '../../data/models/collection.dart';
+import '../providers/artwork_provider.dart';
 import '../providers/local_provider.dart';
 import '../widgets/artwork_grid.dart';
 import '../widgets/loading_indicator.dart';
@@ -32,6 +35,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }
 
   Future<void> _loadCollection(String collectionId) async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -40,6 +45,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
     try {
       final collectionProvider = Provider.of<CollectionProvider>(context, listen: false);
       await collectionProvider.selectCollection(collectionId);
+
+      if (!mounted) return;
 
       final collection = collectionProvider.selectedCollection;
       if (collection != null) {
@@ -50,20 +57,24 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
         if (collection.artworkIds.isNotEmpty) {
           await _loadArtworks(collection.artworkIds);
         } else {
+          if (!mounted) return;
           setState(() {
             _artworks = [];
           });
         }
       } else {
+        if (!mounted) return;
         setState(() {
           _error = 'Collection not found';
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error loading collection: $e';
       });
     } finally {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -71,36 +82,138 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }
 
   Future<void> _loadArtworks(List<String> artworkIds) async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
 
     try {
       final artworks = <Artwork>[];
+      final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
 
-      // This is a simplified version. In a real app, we would need to fetch the artwork details
-      // for each ID using the API. For now, we'll use placeholder data.
+      // Debug output to track collection artwork IDs
+      log('Loading ${artworkIds.length} artworks for collection: $artworkIds');
+
+      // Fetch each artwork by ID from the API
       for (final artworkId in artworkIds) {
-        // Here we would fetch the artwork from the API or local storage
-        // For now, let's create a placeholder
-        artworks.add(
-          Artwork(
-            id: artworkId,
-            titles: ['Artwork #$artworkId'],
-            creators: ['Unknown Artist'],
-            years: ['Date unknown'],
-          ),
-        );
+        try {
+          log('Fetching artwork details for ID: $artworkId');
+
+          // Get the artwork details from the API
+          final artworkDetail = await artworkProvider.getArtworkDetail(artworkId);
+
+          log('Artwork detail response: ${artworkDetail != null ? 'received' : 'null'}');
+
+          if (artworkDetail != null) {
+            // Extract the item data from the response
+            final item = artworkDetail['object'];
+
+            // Debug the structure of the response
+            log('Artwork object: ${item != null ? 'found' : 'null'}');
+            if (item != null) {
+              log('Artwork object keys: ${item.keys.toList()}');
+              log('Title: ${item['title']}');
+              log('Creator: ${item['creator']}');
+
+              // Parse the item into an Artwork object
+              final artwork = Artwork.fromJson(item);
+              log(
+                'Created Artwork object with title: ${artwork.titles?.firstOrNull ?? 'No Title'} and creator: ${artwork.creators?.firstOrNull ?? 'Unknown Artist'}',
+              );
+              artworks.add(artwork);
+            }
+          }
+        } catch (e) {
+          log('Error loading artwork $artworkId: $e');
+        }
       }
+
+      // If we failed to load any artworks through the API, try to load them from the database
+      // since we might have saved them there when adding to the collection
+      if (artworks.isEmpty) {
+        log('No artworks loaded from API, trying to load from local favorites');
+        final favoriteProvider = Provider.of<FavoriteProvider>(context, listen: false);
+        await favoriteProvider.loadFavorites();
+
+        final favorites = favoriteProvider.favorites;
+        log('Found ${favorites.length} favorites in local storage');
+
+        for (final artworkId in artworkIds) {
+          // Try to find this artwork in favorites
+          final favorite = favorites.firstWhere(
+            (fav) => fav['id'] == artworkId,
+            orElse: () => {'id': artworkId, 'data': null},
+          );
+
+          if (favorite['data'] != null) {
+            log('Found artwork $artworkId in favorites');
+            // We found the artwork in favorites, parse it
+            try {
+              final data = favorite['data'];
+              final artwork = Artwork(
+                id: artworkId,
+                titles: data['title'] is List
+                    ? data['title']
+                    : data['title'] != null
+                    ? [data['title']]
+                    : ['Artwork #$artworkId'],
+                creators: data['creator'] is List
+                    ? data['creator']
+                    : data['creator'] != null
+                    ? [data['creator']]
+                    : ['Unknown Artist'],
+                years: data['year'] is List
+                    ? data['year']
+                    : data['year'] != null
+                    ? [data['year']]
+                    : ['Date unknown'],
+                previewUrl: data['edmPreview'],
+              );
+              artworks.add(artwork);
+            } catch (e) {
+              log('Error parsing favorite data: $e');
+              // Create placeholder
+              artworks.add(
+                Artwork(
+                  id: artworkId,
+                  titles: ['Artwork #$artworkId'],
+                  creators: ['Unknown Artist'],
+                  years: ['Date unknown'],
+                  previewUrl: null,
+                ),
+              );
+            }
+          } else {
+            // Create placeholder
+            log('Creating placeholder for artwork $artworkId');
+            artworks.add(
+              Artwork(
+                id: artworkId,
+                titles: ['Artwork #$artworkId'],
+                creators: ['Unknown Artist'],
+                years: ['Date unknown'],
+                previewUrl: null,
+              ),
+            );
+          }
+        }
+      }
+
+      if (!mounted) return;
 
       setState(() {
         _artworks = artworks;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _error = 'Error loading artworks: $e';
       });
     } finally {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });

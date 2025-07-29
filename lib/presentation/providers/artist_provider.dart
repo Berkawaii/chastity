@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
-import '../../data/repositories/europeana_repository.dart';
+import 'package:flutter/widgets.dart';
+
 import '../../data/models/artist.dart';
+import '../../data/repositories/europeana_repository.dart';
 
 class ArtistProvider extends ChangeNotifier {
   final ArtistRepository _repository;
@@ -27,7 +28,10 @@ class ArtistProvider extends ChangeNotifier {
   Future<void> loadFeaturedArtists() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    // Use post-frame callback to avoid build phase conflicts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
 
     try {
       final response = await _repository.getFeaturedArtists();
