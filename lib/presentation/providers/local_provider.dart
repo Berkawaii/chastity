@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart'; // Add this import for WidgetsBinding
-import '../../data/repositories/local_repository.dart';
+
 import '../../data/models/collection.dart';
+import '../../data/repositories/local_repository.dart';
 
 class FavoriteProvider extends ChangeNotifier {
   final FavoriteRepository _repository;

@@ -1,10 +1,11 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConstants {
   // API constants
   static const String apiBaseUrl = 'https://api.europeana.eu';
-  
+
   // API key from .env file or environment variable
   static String get apiKey {
     // Try to get from dotenv first
@@ -12,13 +13,13 @@ class AppConstants {
     if (envKey != null && envKey.isNotEmpty) {
       return envKey;
     }
-    
+
     // Try from platform environment variables
     final platformKey = Platform.environment['API_KEY'];
     if (platformKey != null && platformKey.isNotEmpty) {
       return platformKey;
     }
-    
+
     // Fallback for development only - NEVER commit actual keys
     return 'fallback_dev_key_replace_in_production';
   }

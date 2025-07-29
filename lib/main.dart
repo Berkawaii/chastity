@@ -13,10 +13,10 @@ import 'presentation/screens/search_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables from .env file
   await dotenv.load(fileName: '.env');
-  
+
   runApp(const VirtualMuseumApp());
 }
 
