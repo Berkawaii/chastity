@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme.dart';
@@ -10,8 +11,12 @@ import 'presentation/screens/collection_detail_screen.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 import 'presentation/screens/search_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables from .env file
+  await dotenv.load(fileName: '.env');
+  
   runApp(const VirtualMuseumApp());
 }
 
